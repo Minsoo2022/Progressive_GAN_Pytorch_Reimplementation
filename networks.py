@@ -6,13 +6,13 @@ from torch import nn
 Upsampling = nn.Upsample(scale_factor=2,mode='nearest')
 Downsampling = nn.Upsample(scale_factor=1/2,mode='bilinear')
 class Generator(nn.Module):
-    def __init__(self, stage = 0, ch_Latent=512):
+    def __init__(self, stage = 0, ch_Latent=512, depth_list=[]):
         super(Generator,self).__init__()
         self.stage = 0
         self.ch_Latent = ch_Latent
         self.main_layers = nn.ModuleList()
         self.to_RGB_layers = nn.ModuleList()
-        self.depth_list = [512 for i in range(9)]
+        self.depth_list = depth_list
         self.main_layers.append(nn.Linear(self.ch_Latent, 16 * self.ch_Latent))
         self.main_layers.append(G_ConvBlock(self.ch_Latent, self.depth_list[0], first_layer=True))
         self.to_RGB_layers.append(nn.Conv2d(self.depth_list[0],3,1,1,0))
@@ -32,21 +32,21 @@ class Generator(nn.Module):
                 x= x.reshape(-1, self.ch_Latent, 4, 4)
             if layer._get_name() == 'G_ConvBlock':
                 x = Upsampling(x)
-        if alpha != 1 :
+        if alpha != 1 and self.stage != 0:
             y = self.to_RGB_layers[-2](x)
         x = self.to_RGB_layers[-1](self.main_layers[-1](x))
-        if alpha != 1 :
+        if alpha != 1 and self.stage != 0:
             x = x * alpha + y * (1 - alpha)
         return x
 
 class Discriminator(nn.Module):
-    def __init__(self, stage = 0, ch_Latent=512):
+    def __init__(self, stage = 0, ch_Latent=512, depth_list=[]):
         super(Discriminator,self).__init__()
         self.stage = 0
         self.ch_Latent = ch_Latent
         self.main_layers = nn.ModuleList()
         self.from_RGB_layers = nn.ModuleList()
-        self.depth_list = [512 for i in range(9)]
+        self.depth_list = depth_list
         self.main_layers.append(nn.Linear(ch_Latent, 1))
         self.main_layers.append(D_ConvBlock(self.depth_list[0], ch_Latent, first_layer=True))
         self.from_RGB_layers.append(nn.Conv2d(3,self.depth_list[0],1,1,0))
@@ -60,17 +60,15 @@ class Discriminator(nn.Module):
         self.from_RGB_layers.append(nn.Conv2d(3,self.depth_list[self.stage],1,1,0))
 
     def forward(self, x, alpha):
-        if alpha != 1 :
+        if alpha != 1 and self.stage != 0:
             y = self.from_RGB_layers[-2](Downsampling(x))
         x = self.from_RGB_layers[-1](x)
-        if alpha != 1 :
-            x = x * alpha + y * (1 - alpha)
         for i, layer in enumerate(reversed(self.main_layers[2:])):
             x = layer(x)
             if layer._get_name() == 'D_ConvBlock':
                 x = Downsampling(x)
-            else :
-                print(1)
+            if i == 0 and alpha != 1 and self.stage != 0:
+                x = x * alpha + y * (1 - alpha)
         x = self.main_layers[1](x)
         x = x.reshape(-1, self.ch_Latent)
         x = self.main_layers[0](x)
