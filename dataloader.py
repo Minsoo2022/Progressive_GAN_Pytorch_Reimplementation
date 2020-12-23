@@ -23,7 +23,6 @@ class FFHQ_dataset(data.Dataset):
         data_dir = opt.data_dir
         resolution = 2**(stage+2)
         self.image_path = os.path.join(data_dir, f'FFHQ_{resolution}')
-        #self.image_path = os.path.join(data_dir, f'test_{resolution}')
         self.image_list = glob.glob(os.path.join(self.image_path,'*.png'))
 
     def __len__(self):
