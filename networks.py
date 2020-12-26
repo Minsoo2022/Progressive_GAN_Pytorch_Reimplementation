@@ -108,7 +108,7 @@ class Discriminator(nn.Module):
 
     def get_minibatch_standard_deviation(self, x):
         size = x.shape
-        y = x.std([0,1]).mean().view(1,1,1,1).expand(size[0],1,size[2],size[3])
+        y = x.std([0]).mean().expand(size[0],1,size[2],size[3])
         return y
 
     def forward(self, x, alpha):
