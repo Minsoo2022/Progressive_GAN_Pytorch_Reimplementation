@@ -11,6 +11,7 @@ class Generator(nn.Module):
     def __init__(self, stage = 0, ch_Latent=512, depth_list=[], norm='PixelNorm', equalized=True):
         super(Generator,self).__init__()
         self.stage = 0
+        self.init_stage = stage
         self.ch_Latent = ch_Latent
         self.norm = norm
         self.equalized = equalized
@@ -18,14 +19,17 @@ class Generator(nn.Module):
         self.to_RGB_layers = nn.ModuleList()
         self.depth_list = depth_list
         self.layers_init()
-        if stage > 0 :
-            for i in range(stage) :
-                self.stage_up()
+
 
     def layers_init(self):
         self.main_layers.append(G_Linear(self.ch_Latent, self.ch_Latent, norm=self.norm, equalized=self.equalized))
         self.main_layers.append(G_ConvBlock(self.ch_Latent, self.depth_list[0], first_layer=True, norm=self.norm, equalized=self.equalized))
         self.to_RGB_layers.append(Equalized_layer(nn.Conv2d(self.depth_list[0], 3, 1, 1, 0), self.equalized))
+
+    def stage_init(self):
+        if self.init_stage > 0 :
+            for i in range(self.init_stage) :
+                self.stage_up()
 
     def stage_up(self):
         self.stage += 1
@@ -85,6 +89,7 @@ class Discriminator(nn.Module):
     def __init__(self, stage = 0, ch_Latent=512, depth_list=[], norm='PixelNorm', equalized=True):
         super(Discriminator,self).__init__()
         self.stage = 0
+        self.init_stage = stage
         self.ch_Latent = ch_Latent
         self.norm = norm
         self.equalized = equalized
@@ -92,8 +97,10 @@ class Discriminator(nn.Module):
         self.from_RGB_layers = nn.ModuleList()
         self.depth_list = depth_list
         self.layers_init()
-        if stage > 0 :
-            for i in range(stage) :
+
+    def stage_init(self):
+        if self.init_stage > 0 :
+            for i in range(self.init_stage) :
                 self.stage_up()
 
     def layers_init(self):
@@ -143,7 +150,6 @@ class D_ConvBlock(nn.Module):
             return self.Conv_2(x)
         x = self.Activation(self.Conv_2(x))
         return x
-
 
 class Equalized_layer(nn.Module):
     def __init__(self, layer, equalized):

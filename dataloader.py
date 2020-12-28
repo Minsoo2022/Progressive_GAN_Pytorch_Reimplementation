@@ -13,7 +13,7 @@ def get_loader(opt, stage, batch_size) :
         transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
     ])
     dataset = FFHQ_dataset(transform=transform, opt=opt, stage=stage)
-    dataloader = data.DataLoader(dataset=dataset,batch_size=batch_size,shuffle=True)
+    dataloader = data.DataLoader(dataset=dataset,batch_size=batch_size,shuffle=True,num_workers=opt.workers)
     return dataloader
 
 class FFHQ_dataset(data.Dataset):
