@@ -1,9 +1,8 @@
-from utils import *
-
 import torch
 from torch import nn
 import numpy as np
 import math
+import torch.nn.utils.spectral_norm as spectral_norm
 
 Upsampling = nn.Upsample(scale_factor=2,mode='nearest')
 Downsampling = nn.Upsample(scale_factor=1/2,mode='bilinear')
@@ -18,8 +17,8 @@ class Generator(nn.Module):
         self.main_layers = nn.ModuleList()
         self.to_RGB_layers = nn.ModuleList()
         self.depth_list = depth_list
+        self.pixel_norm = Pixel_Norm()
         self.layers_init()
-
 
     def layers_init(self):
         self.main_layers.append(G_Linear(self.ch_Latent, self.ch_Latent, norm=self.norm, equalized=self.equalized))
@@ -37,14 +36,17 @@ class Generator(nn.Module):
         self.to_RGB_layers.append(Equalized_layer(nn.Conv2d(self.depth_list[self.stage],3,1,1,0),self.equalized))
 
     def forward(self, x, alpha):
+        x = self.pixel_norm(x)
         for i, layer in enumerate(self.main_layers[:-1]):
             x = layer(x)
-            if layer._get_name() == 'G_Linear':
+            if i == 0:
                 x= x.reshape(-1, self.ch_Latent, 1, 1)
-            if layer._get_name() == 'G_ConvBlock':
+            elif i != 0 and i != len(self.main_layers[:-1]) - 1:
                 x = Upsampling(x)
         if alpha != 1 and self.stage != 0:
-            y = self.to_RGB_layers[-2](x)
+            y = Upsampling(self.to_RGB_layers[-2](x))
+        if i != 0:
+            x = Upsampling(x)
         x = self.to_RGB_layers[-1](self.main_layers[-1](x))
         if alpha != 1 and self.stage != 0:
             x = x * alpha + y * (1 - alpha)
@@ -111,7 +113,7 @@ class Discriminator(nn.Module):
     def stage_up(self):
         self.stage += 1
         self.main_layers.append(D_ConvBlock(self.depth_list[self.stage], self.depth_list[self.stage-1]))
-        self.from_RGB_layers.append(nn.Conv2d(3,self.depth_list[self.stage],1,1,0))
+        self.from_RGB_layers.append(nn.Sequential(nn.Conv2d(3,self.depth_list[self.stage],1,1,0), nn.LeakyReLU(0.2)))
 
     def get_minibatch_standard_deviation(self, x):
         size = x.shape

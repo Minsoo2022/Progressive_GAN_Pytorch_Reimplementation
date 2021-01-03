@@ -4,6 +4,7 @@ import torchvision
 import numpy as np
 import tensorboardX
 import os
+from tqdm import tqdm
 from models import Progressive_GAN
 from dataloader import get_loader
 from config import get_train_config
@@ -27,6 +28,7 @@ def get_train_parse():
     parser.add_argument("--Equalized", type=bool, default=True, help="Use equalized learning rate")
     parser.add_argument("--gpu_ids", type=str, default='0', help="GPU ids")
     parser.add_argument("--workers", type=int, default=8, help="num workers")
+    parser.add_argument("--train_type", type=int, default='0', help="iteration and batch size")
     parser.add_argument("--debug", action = 'store_true', help="for debugging")
     return parser.parse_args()
 
@@ -37,16 +39,17 @@ def train(opt, config, model, board) :
         batch_size = config['batch_size_list'][stage]
         max_iter = config['max_iter_list'][stage]
         dataloader = iter(get_loader(opt,stage,batch_size))
-        for i in range(max_iter):
+        for i in tqdm(range(max_iter)):
             try :
                 real_image = next(dataloader)
             except StopIteration:
                 dataloader = (iter(get_loader(opt, stage, batch_size)))
                 real_image = next(dataloader)
             alpha = min(i / (max_iter//2), 1)
-            print(stage, i, alpha)
+
             losses, images = model.train(real_image, alpha)
             if i % 1000 == 0 :
+                print(stage, i, alpha)
                 with torch.no_grad() :
                     val_images = model.G(val_Latent, alpha)
                 add_losses(board, losses, stage, i)

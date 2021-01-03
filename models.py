@@ -1,5 +1,4 @@
 from networks import Generator, Discriminator
-
 import torch
 from torch import nn
 import os
@@ -41,6 +40,8 @@ class Progressive_GAN():
         if hasattr(self.G,'module') :
             multi = True
             self.single_gpu()
+        else :
+            multi = False
         self.G.stage_up()
         self.D.stage_up()
         self.G = self.G.to(self.device)
@@ -52,7 +53,6 @@ class Progressive_GAN():
     def train(self, real, alpha):
         real = real.to(self.device)
         batch_size = real.shape[0]
-        print(batch_size)
         latent_vector = torch.randn(batch_size, self.ch_Latent).to(self.device)
 
         fake = self.G(latent_vector, alpha)
@@ -99,6 +99,8 @@ class Progressive_GAN():
         if hasattr(self.G,'module') :
             multi = True
             self.single_gpu()
+        else :
+            multi = False
         torch.save({
             'iteration' : iteration,
             'G' : self.G.cpu().state_dict(),
@@ -117,6 +119,8 @@ class Progressive_GAN():
         if hasattr(self.G,'module') :
             multi = True
             self.single_gpu()
+        else :
+            multi = False
         self.G.load_state_dict(file['G'],strict=False)
         self.D.load_state_dict(file['D'],strict=False)
         self.optim_G.load_state_dict(file['optim_G'])
