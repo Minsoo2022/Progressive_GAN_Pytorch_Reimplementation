@@ -45,7 +45,7 @@ class Generator(nn.Module):
                 x = Upsampling(x)
         if alpha != 1 and self.stage != 0:
             y = Upsampling(self.to_RGB_layers[-2](x))
-        if i != 0:
+        if self.stage != 0:
             x = Upsampling(x)
         x = self.to_RGB_layers[-1](self.main_layers[-1](x))
         if alpha != 1 and self.stage != 0:
@@ -108,7 +108,7 @@ class Discriminator(nn.Module):
     def layers_init(self):
         self.main_layers.append(Equalized_layer(nn.Linear(self.ch_Latent, 1), self.equalized))
         self.main_layers.append(D_ConvBlock(self.depth_list[0]+1, self.ch_Latent, first_layer=True, equalized=self.equalized))
-        self.from_RGB_layers.append(Equalized_layer(nn.Conv2d(3, self.depth_list[0], 1, 1, 0), self.equalized))
+        self.from_RGB_layers.append(nn.Sequential(Equalized_layer(nn.Conv2d(3, self.depth_list[0], 1, 1, 0), self.equalized), nn.LeakyReLU(0.2)))
 
     def stage_up(self):
         self.stage += 1
