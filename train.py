@@ -9,7 +9,7 @@ from models import Progressive_GAN
 from dataloader import get_loader
 from config import get_train_config
 from utils import *
-
+1
 
 def get_train_parse():
     parser = argparse.ArgumentParser()
